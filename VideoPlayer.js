@@ -14,7 +14,9 @@ import {
     TouchableOpacity,
     Text
 } from 'react-native';
+import Slider from "@react-native-community/slider";
 import _ from 'lodash';
+import { ProgressBar } from './ProgressBar';
 
 
 let currentSeekTime = 0;
@@ -337,7 +339,7 @@ export default class VideoPlayer extends Component {
             ),
             Animated.timing(
                 this.animations.topControl.marginTop,
-                { toValue: -100 }
+                { toValue: 20 }
             ),
             Animated.timing(
                 this.animations.bottomControl.opacity,
@@ -345,7 +347,7 @@ export default class VideoPlayer extends Component {
             ),
             Animated.timing(
                 this.animations.bottomControl.marginBottom,
-                { toValue: -100 }
+                { toValue: 20 }
             ),
         ]).start();
     }
@@ -842,6 +844,19 @@ export default class VideoPlayer extends Component {
         });
     }
 
+    onSeekBar = ( evt, gestureState ) => {
+        const time = evt.seekTime;
+        let state = this.state;
+        if ( time >= state.duration && ! state.loading ) {
+            state.paused = true;
+            this.events.onEnd();
+        } else {
+            this.seekTo( time );
+            this.setControlTimeout();
+            state.seeking = false;
+        }
+        this.setState( state );
+    }
 
     /**
     | -------------------------------------------------------
@@ -929,7 +944,6 @@ export default class VideoPlayer extends Component {
      * Back button control
      */
     renderBack() {
-
         return this.renderControl(
             <Image
                 source={ require( './assets/img/back.png' ) }
@@ -942,21 +956,28 @@ export default class VideoPlayer extends Component {
 
     renderForward() {
         return this.renderControl(
+            <>
+            <Text style={{color : '#FFFFFF', fontSize: 8,fontWeight: '200', position:'absolute', top: 21, left:22}}>15</Text>
             <Image
-                source={ require( './assets/img/back.png' ) }
-            />,
+                source={ require( './assets/img/forward.png' ) }
+                style={ styles.controls.forward }
+            />
+            </>,
             this.events.onForward,
             styles.controls.forward
         )
     }
     renderRewind() {
         return this.renderControl(
+            <>
+            <Text style={{color : '#FFFFFF', fontSize: 8,fontWeight: '200', position:'absolute', top: 21, left:23}}>15</Text>
             <Image
-                source={ require( './assets/img/back.png' ) }
-                style={ styles.controls.back }
-            />,
+                source={ require( './assets/img/backward.png' ) }
+                style={ styles.controls.backward }
+            />
+            </>,
             this.events.onRewind,
-            styles.controls.back
+            styles.controls.backward
         )
     }
 
@@ -1027,11 +1048,10 @@ export default class VideoPlayer extends Component {
                     { seekbarControl }
                     <SafeAreaView
                       style={[styles.controls.row, styles.controls.bottomControlGroup]}>
-                          <View style={{flexDirection:'row', flex: 0.2}}>
+                          <View style={{flexDirection:'row'}}>
                       {rewindControl}
                       {playPauseControl}
                       {forwardControl}</View>
-                      {/* {this.renderTitle()} */}
                       {volumeControl}
                       {timerControl}
                     </SafeAreaView>
@@ -1046,32 +1066,39 @@ export default class VideoPlayer extends Component {
     renderSeekbar() {
 
         return (
-            <View style={ styles.seekbar.container } >
-                <View
-                    style={ styles.seekbar.track }
-                    onLayout={ event => this.player.seekerWidth = event.nativeEvent.layout.width }
-                >
-                    <View style={[
-                        styles.seekbar.fill,
-                        {
-                            width: this.state.seekerFillWidth,
-                            backgroundColor: this.props.seekColor || '#FFF'
-                        }
-                    ]}/>
-                </View>
-                <View
-                    style={[
-                        styles.seekbar.handle,
-                        { left: this.state.seekerPosition }
-                    ]}
-                    { ...this.player.seekPanResponder.panHandlers }
-                >
-                    <View style={[
-                        styles.seekbar.circle,
-                        { backgroundColor: this.props.seekColor || '#FFF' } ]}
-                    />
-                </View>
-            </View>
+            <ProgressBar
+                currentTime={this.state.currentTime}
+                duration={this.state.duration > 0 ? this.state.duration : 0}
+                onSlideStart={this.methods.togglePlayPause}
+                onSlideComplete={this.methods.togglePlayPause}
+                onSlideCapture={this.onSeekBar}
+              />
+            // <View style={ styles.seekbar.container } >
+            //     <View
+            //         style={ styles.seekbar.track }
+            //         onLayout={ event => this.player.seekerWidth = event.nativeEvent.layout.width }
+            //     >
+            //         <View style={[
+            //             styles.seekbar.fill,
+            //             {
+            //                 width: this.state.seekerFillWidth,
+            //                 backgroundColor: this.props.seekColor || '#FFF'
+            //             }
+            //         ]}/>
+            //     </View>
+            //     <View
+            //         style={[
+            //             styles.seekbar.handle,
+            //             { left: this.state.seekerPosition }
+            //         ]}
+            //         { ...this.player.seekPanResponder.panHandlers }
+            //     >
+            //         <View style={[
+            //             styles.seekbar.circle,
+            //             { backgroundColor: this.props.seekColor || '#FFF' } ]}
+            //         />
+            //     </View>
+            // </View>
         );
     }
 
@@ -1286,8 +1313,15 @@ const styles = {
             width: null,
         },
         forward: {
-            transform: [{ rotate: "180deg" }],
-
+            height: 25,
+            width: 25, 
+            bottom : 2,
+            right: 2
+        },
+        backward:{
+            height: 25,
+            width: 25,
+            bottom : 2,
         },
         vignette: {
             resizeMode: 'stretch'
@@ -1329,8 +1363,6 @@ const styles = {
             alignSelf: 'stretch',
             alignItems: 'center',
             justifyContent: 'space-between',
-            // marginLeft: 12,
-            // marginRight: 12,
             marginBottom: 0,
         },
         volume: {
@@ -1341,9 +1373,8 @@ const styles = {
             transform :[{ rotate: "90deg" }]
         },
         playPause: {
-            // paddingHorizontal:10,
-            // width: 20,
-            // zIndex: 0
+            paddingLeft:20,
+            paddingRight:0,
         },
         title: {
             alignItems: 'center',
